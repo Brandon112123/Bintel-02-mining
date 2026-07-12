@@ -318,6 +318,17 @@ def main() -> None:
     LOG.info("CALL a function to summarize the datasets........")
     summarize(df_customers, df_products, df_sales)
 
+    # SAVE ALL CHARTS: app_case
+    images_dir = Path("docs/images")
+    images_dir.mkdir(parents=True, exist_ok=True)
+
+    for chart_number, figure_number in enumerate(plt.get_fignums(), start=1):
+        figure = plt.figure(figure_number)
+        image_path = images_dir / f"app_case_Figure_{chart_number}.png"
+        figure.savefig(image_path, dpi=300, bbox_inches="tight")
+        LOG.info(f"Saved chart: {image_path}")
+
+    # END SAVE ALL CHARTS: app_case
     LOG.info("CALL a function to show charts........")
     plt.show()
 

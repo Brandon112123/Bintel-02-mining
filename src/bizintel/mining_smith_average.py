@@ -1,8 +1,8 @@
-"""mining_case.py - example.
+"""mining_smith_average.py - custom project.
 
-An example of exploring and mining raw smart sales data.
+A custom project that explores average sales by customer region.
 
-Author: Denise Case
+Author: Brandon Smith
 Date: 2026-06
 
 Process:
@@ -12,6 +12,7 @@ Process:
     - Summarize numeric columns.
     - Visualize product price distribution.
     - Visualize sales trend over time.
+    - Calculate and visualize average sale amount by region.
     - Log a summary of findings.
 
 Data Source:
@@ -21,7 +22,7 @@ Data Source:
 
 Terminal command to run this file from the root project folder:
 
-uv run python -m bizintel.mining_case
+uv run python -m bizintel.mining_smith_average
 
 OBS:
   Don't edit this file - it should remain a working example.
@@ -59,6 +60,7 @@ DATA_RAW: Final[Path] = Path("data/raw")
 CUSTOMERS_FILE: Final[Path] = DATA_RAW / "customers_data.csv"
 PRODUCTS_FILE: Final[Path] = DATA_RAW / "products_data.csv"
 SALES_FILE: Final[Path] = DATA_RAW / "sales_data.csv"
+IMAGES_DIR: Final[Path] = Path("docs/images")
 
 
 # === Section 2. Define Reusable Functions ===
@@ -104,7 +106,7 @@ def plot_price_distribution(df_products: pd.DataFrame) -> None:
     # The subplots() function returns a tuple of (figure, axes)
     # We only need the axes object, so we use _ to ignore the figure
 
-    _, ax = plt.subplots(figsize=(9, 5))
+    fig, ax = plt.subplots(figsize=(9, 5))
 
     # Call the ax.hist() method to plot the histogram
     #
@@ -134,8 +136,12 @@ def plot_price_distribution(df_products: pd.DataFrame) -> None:
     # Use plt.tight_layout() to automatically adjust the spacing
     # between the chart elements so they do not overlap
     plt.tight_layout()
+    IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+    fig.savefig(
+        IMAGES_DIR / "mining_smith_average_Figure_1.png", dpi=300, bbox_inches="tight"
+    )
 
-    LOG.info("Price distribution chart created")
+    LOG.info("Price distribution chart created and saved")
 
 
 # === Section 2.2 DEFINE A SALES TREND FUNCTION ===
@@ -203,7 +209,77 @@ def plot_sales_trend(df_sales: pd.DataFrame) -> None:
         ylabel="Total Sales Amount ($)",
     )
 
-    LOG.info("Sales trend chart created")
+    IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+    plt.gcf().savefig(
+        IMAGES_DIR / "mining_smith_average_Figure_2.png", dpi=300, bbox_inches="tight"
+    )
+
+    LOG.info("Sales trend chart created and saved")
+
+
+def plot_average_sales_by_region(
+    df_sales: pd.DataFrame,
+    df_customers: pd.DataFrame,
+) -> None:
+    """Plot the average sale amount by customer region.
+
+    WHY: Total sales can be influenced by the number of transactions.
+    Average sale amount shows the typical transaction size in each region.
+
+    Args:
+        df_sales: Sales DataFrame with CustomerID and SaleAmount columns.
+        df_customers: Customers DataFrame with CustomerID and Region columns.
+
+    Returns:
+        None
+    """
+    LOG.info("Plotting average sales by region")
+
+    # Work with a copy so the original sales DataFrame is not changed.
+    df = df_sales.copy()
+
+    # Convert SaleAmount to numeric and turn invalid values into NaN.
+    df["SaleAmount"] = pd.to_numeric(df["SaleAmount"], errors="coerce")
+
+    # Combine sales records with customer region information.
+    merged = df.merge(
+        df_customers[["CustomerID", "Region"]],
+        on="CustomerID",
+        how="left",
+    )
+
+    # Calculate the average sale amount for each region.
+    average_sales = (
+        merged.groupby("Region")["SaleAmount"].mean().sort_values(ascending=False)
+    )
+
+    # Create the bar chart.
+    fig, ax = plt.subplots(figsize=(9, 5))
+    average_sales.plot(kind="bar", ax=ax, color="steelblue")
+
+    ax.set_title("Average Sale Amount by Region (CLOSE chart to continue)")
+    ax.set_xlabel("Region")
+    ax.set_ylabel("Average Sale Amount ($)")
+    ax.tick_params(axis="x", rotation=0)
+
+    # Add value labels above the bars.
+    for bar in ax.patches:
+        height = bar.get_height()
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            height,
+            f"${height:,.2f}",
+            ha="center",
+            va="bottom",
+        )
+
+    plt.tight_layout()
+    IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+    fig.savefig(
+        IMAGES_DIR / "mining_smith_average_Figure_3.png", dpi=300, bbox_inches="tight"
+    )
+
+    LOG.info("Average sales by region chart created and saved")
 
 
 # === Section 2.3 DEFINE A SUMMARIZE FUNCTION ===
@@ -302,20 +378,32 @@ def main() -> None:
     LOG.info("CALL a function to plot sales trend over time........")
     plot_sales_trend(df_sales)
 
+    LOG.info("CALL a function to plot average sales by region........")
+    plot_average_sales_by_region(df_sales, df_customers)
+
     LOG.info("CALL a function to summarize the datasets........")
     summarize(df_customers, df_products, df_sales)
 
-    # SAVE ALL CHARTS: mining_case
+    # SAVE ALL CHARTS: mining_smith
     images_dir = Path("docs/images")
     images_dir.mkdir(parents=True, exist_ok=True)
 
     for chart_number, figure_number in enumerate(plt.get_fignums(), start=1):
         figure = plt.figure(figure_number)
-        image_path = images_dir / f"mining_case_Figure_{chart_number}.png"
+        image_path = images_dir / f"mining_smith_Figure_{chart_number}.png"
         figure.savefig(image_path, dpi=300, bbox_inches="tight")
         LOG.info(f"Saved chart: {image_path}")
 
-    # END SAVE ALL CHARTS: mining_case
+    # END SAVE ALL CHARTS: mining_smith
+    images_dir = Path("docs/images")
+    images_dir.mkdir(parents=True, exist_ok=True)
+
+    for chart_number, figure_number in enumerate(plt.get_fignums(), start=1):
+        figure = plt.figure(figure_number)
+        image_path = images_dir / f"mining_smith_Figure_{chart_number}.png"
+        figure.savefig(image_path, dpi=300, bbox_inches="tight")
+        LOG.info(f"Saved chart: {image_path}")
+
     LOG.info("CALL a function to show charts........")
     plt.show()
 
